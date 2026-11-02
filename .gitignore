@@ -20,6 +20,7 @@ data/processed/*
 # Generated reports
 reports/*
 !reports/.gitkeep
+!reports/*.md
 
 # macOS
 .DS_Store

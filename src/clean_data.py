@@ -1,75 +1,88 @@
-import pandas as pd
 
-# Load the original dataset
+import pandas as pd
+from pathlib import Path
+
+
+# ==========================================
+# 1. LOAD THE ORIGINAL DATASET
+# ==========================================
+
 df = pd.read_excel("data/raw/Online Retail.xlsx")
 
-# Display the original dataset dimensions
-print("Original dataset shape:")
+print("\n========== DATASET OVERVIEW ==========")
+
+print("\nOriginal dataset shape:")
 print(df.shape)
 
-# Count duplicate rows before cleaning
+
+# ==========================================
+# 2. DUPLICATE REMOVAL
+# ==========================================
+
+print("\n========== DUPLICATE ANALYSIS ==========")
+
 duplicate_count = df.duplicated().sum()
 
-print("\nDuplicate rows found:")
+print("\nExact duplicate rows found:")
 print(duplicate_count)
 
 # Remove exact duplicate rows
-df = df.drop_duplicates()
+df = df.drop_duplicates().copy()
 
-# Display dataset after removing duplicates
-print("\nDataset after removing duplicates:")
+print("\nDataset shape after duplicate removal:")
 print(df.shape)
 
-# Verify that duplicates have been removed
 print("\nRemaining duplicate rows:")
 print(df.duplicated().sum())
 
-# Check Missing values after removing duplicates
-print("\nMissing values after removing duplicates:")
-print(df.isnull().sum())
 
-# Calculate total missing cells
-print("\nTotal missing cells:")
-print(df.isnull().sum().sum())
+# ==========================================
+# 3. REVENUE CALCULATION
+# ==========================================
 
-# Separate records with missing customer IDs
-missing_customers = df[df["CustomerID"].isnull()]
+print("\n========== REVENUE ANALYSIS ==========")
 
-print("\nRecords of missing customer IDs:")
-print(missing_customers.head(10))
-
-print("\nTotal number of missing customers IDs:")
-print(len(missing_customers))
-
-# Calculate revenue for each record
-missing_customers = df[df["CustomerID"].isnull()].copy()
-
-missing_customers["Revenue"] = (missing_customers["Quantity"] * missing_customers["UnitPrice"])
-
-# Calculate total revenue
-print("\nTotal revenue from records with missing CustomerIDs:")
-print(missing_customers["Revenue"].sum())
-
-# Calculate revenue of the entire clean dataset
+# Calculate revenue for each transaction
 df["Revenue"] = df["Quantity"] * df["UnitPrice"]
 
 total_revenue = df["Revenue"].sum()
 
-missing_customer_revenue = missing_customers["Revenue"].sum()
-
-# Calculate percentage calculation
-missing_customer_percentage = (missing_customer_revenue/total_revenue) * 100
-
 print("\nTotal dataset revenue:")
 print(round(total_revenue, 2))
 
-print("\nRevenue from missing CustomerIDs:")
-print(round(missing_customer_revenue, 2))
+
+# ==========================================
+# 4. MISSING VALUE ANALYSIS
+# ==========================================
+
+print("\n========== MISSING VALUE ANALYSIS ==========")
+
+print("\nMissing values in each column:")
+print(df.isnull().sum())
+
+print("\nTotal missing cells:")
+print(df.isnull().sum().sum())
+
+# Investigate records with missing CustomerIDs
+missing_customers = df[df["CustomerID"].isnull()].copy()
+
+missing_customers_revenue = missing_customers["Revenue"].sum()
+
+missing_customer_percentage = (
+    missing_customers_revenue / total_revenue
+) * 100
+
+print("\nRecords with missing CustomerIDs:")
+print(len(missing_customers))
+
+print("\nRevenue from records with missing CustomerIDs:")
+print(round(missing_customers_revenue, 2))
 
 print("\nPercentage of revenue from missing CustomerIDs:")
 print(round(missing_customer_percentage, 2), "%")
 
-# Separate records with missing descriptions
+
+# Investigate records with missing descriptions
 missing_descriptions = df[df["Description"].isnull()].copy()
 
 print("\nRecords with missing descriptions:")
@@ -79,44 +92,120 @@ print("\nUnique StockCodes with missing descriptions:")
 print(missing_descriptions["StockCode"].nunique())
 
 print("\nRevenue from records with missing descriptions:")
-print((missing_descriptions["Quantity"] * missing_descriptions["UnitPrice"]).sum())
+print(round(missing_descriptions["Revenue"].sum(), 2))
 
-print("\nMost common StockCodes:")
+print("\nMost common StockCodes with missing descriptions:")
 print(missing_descriptions["StockCode"].value_counts().head(10))
 
-# Calculate revenue for zero price records
-zero_price = df[df["UnitPrice"]==0].copy()
 
-zero_price_revenue = (zero_price["Quantity"] * zero_price["UnitPrice"])
+# ==========================================
+# 5. PRICE ANALYSIS
+# ==========================================
 
-print("\nZero price record revenue:")
-print(zero_price_revenue.sum())
+print("\n========== PRICE ANALYSIS ==========")
 
-# Inspect negative price records
-negative_price = df[df["UnitPrice"]<0]
+# Investigate zero-price records
+zero_price = df[df["UnitPrice"] == 0].copy()
 
-print("\nNegative price records:")
-print(negative_price.to_string(index=False))
+print("\nRecords with zero UnitPrice:")
+print(len(zero_price))
 
-# Identify negative quantity records
+print("\nMost common descriptions in zero-price records:")
+print(zero_price["Description"].value_counts().head(10))
+
+print("\nMissing CustomerIDs in zero-price records:")
+print(zero_price["CustomerID"].isnull().sum())
+
+print("\nRevenue from zero-price records:")
+print(round(zero_price["Revenue"].sum(), 2))
+
+
+# Investigate negative-price records
+negative_price = df[df["UnitPrice"] < 0].copy()
+
+print("\nRecords with negative UnitPrice:")
+print(len(negative_price))
+
+print("\nNegative-price records:")
+print(
+    negative_price[
+        [
+            "InvoiceNo",
+            "StockCode",
+            "Description",
+            "Quantity",
+            "UnitPrice",
+            "CustomerID",
+            "Country"
+        ]
+    ].to_string(index=False)
+)
+
+print("\nRevenue from negative-price records:")
+print(round(negative_price["Revenue"].sum(), 2))
+
+
+# ==========================================
+# 6. QUANTITY AND CANCELLATION ANALYSIS
+# ==========================================
+
+print("\n========== TRANSACTION ANALYSIS ==========")
+
+# Identify all negative-quantity records
 negative_quantity = df[df["Quantity"] < 0].copy()
 
-print("\nTotal negative quantity records:")
+print("\nTotal negative-quantity records:")
 print(len(negative_quantity))
 
-print("\nNegative quantity records with C invoices:")
-print(negative_quantity["InvoiceNo"].astype(str).str.startswith("C").sum())
+# Identify cancellation invoices
+cancellation_mask = (
+    df["InvoiceNo"].astype(str).str.startswith("C")
+)
 
-print("\nNegative quantity records without C invoices:")
-print((~negative_quantity["InvoiceNo"].astype(str).str.startswith("C")).sum())
+cancellations = df[
+    (df["Quantity"] < 0) & cancellation_mask
+].copy()
 
-print("\nRevenue from negative quantity records:")
-print(negative_quantity["Revenue"].sum())
+print("\nNegative quantities with C invoices:")
+print(len(cancellations))
 
-# Separate positive and negative revenue records
+# Identify negative quantities without C prefix
+other_negative_quantity = df[
+    (df["Quantity"] < 0) & (~cancellation_mask)
+].copy()
 
+print("\nNegative quantities without C invoices:")
+print(len(other_negative_quantity))
+
+print("\nSample unusual negative-quantity records:")
+print(
+    other_negative_quantity[
+        [
+            "InvoiceNo",
+            "StockCode",
+            "Description",
+            "Quantity",
+            "UnitPrice",
+            "CustomerID"
+        ]
+    ].head(10)
+)
+
+print("\nRevenue from all negative-quantity records:")
+print(round(negative_quantity["Revenue"].sum(), 2))
+
+
+# ==========================================
+# 7. REVENUE CLASSIFICATION
+# ==========================================
+
+print("\n========== REVENUE CLASSIFICATION ==========")
+
+# Separate records based on calculated revenue
 positive_revenue = df[df["Revenue"] > 0]
+
 negative_revenue = df[df["Revenue"] < 0]
+
 zero_revenue = df[df["Revenue"] == 0]
 
 print("\nPositive revenue records:")
@@ -134,22 +223,55 @@ print(round(positive_revenue["Revenue"].sum(), 2))
 print("\nTotal negative revenue:")
 print(round(negative_revenue["Revenue"].sum(), 2))
 
-# Investigate negative revenue records
+print("\nNet dataset revenue:")
+print(round(df["Revenue"].sum(), 2))
 
-negative_revenue = df[df["Revenue"] < 0].copy()
 
-cancellations = negative_revenue[negative_revenue["InvoiceNo"].astype(str).str.startswith("C")]
+# ==========================================
+# 8. NEGATIVE REVENUE INVESTIGATION
+# ==========================================
 
-other_negative_revenue = negative_revenue[~negative_revenue["InvoiceNo"].astype(str).str.startswith("C")]
+print("\n========== NEGATIVE REVENUE INVESTIGATION ==========")
+
+negative_revenue_cancellations = negative_revenue[
+    negative_revenue["InvoiceNo"].astype(str).str.startswith("C")
+]
+
+other_negative_revenue = negative_revenue[
+    ~negative_revenue["InvoiceNo"].astype(str).str.startswith("C")
+]
 
 print("\nNegative revenue with C invoices:")
-print(len(cancellations))
+print(len(negative_revenue_cancellations))
 
 print("\nNegative revenue without C invoices:")
 print(len(other_negative_revenue))
 
 print("\nRevenue from C invoices:")
-print(round(cancellations["Revenue"].sum(), 2))
+print(round(negative_revenue_cancellations["Revenue"].sum(), 2))
 
 print("\nRevenue from non-C negative records:")
 print(round(other_negative_revenue["Revenue"].sum(), 2))
+
+
+# ==========================================
+# 9. SAVE THE PROCESSED DATASET
+# ==========================================
+
+print("\n========== SAVING PROCESSED DATA ==========")
+
+output_directory = Path("data/processed")
+
+output_directory.mkdir(parents=True, exist_ok=True)
+
+output_path = output_directory / "online_retail_cleaned.csv"
+
+df.to_csv(output_path, index=False)
+
+print("\nProcessed dataset saved successfully:")
+print(output_path)
+
+print("\nFinal dataset shape:")
+print(df.shape)
+
+print("\nCleaning process completed.")

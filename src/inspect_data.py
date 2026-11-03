@@ -1,202 +1,179 @@
 import pandas as pd
 
+# Load the original dataset
 df = pd.read_excel("data/raw/Online Retail.xlsx")
 
-print("First five rows:")
+
+# ==========================================
+# 1. DATASET OVERVIEW
+# ==========================================
+
+print("\n========== DATASET OVERVIEW ==========")
+
+print("\nFirst five records:")
 print(df.head())
 
-print("\nColumn names:")
-print(df.columns)
-
-print("\nSize of the data:")
+print("\nDataset dimensions:")
 print(df.shape)
 
-print("\nInformation of the data:")
-print(df.info())
+print("\nColumn names:")
+print(df.columns.tolist())
 
-print("\nDescribe the data numerically:")
+print("\nDataset information:")
+df.info()
+
+print("\nNumerical summary:")
 print(df.describe())
+
+# ==========================================
+# 2. MISSING VALUE ANALYSIS
+# ==========================================
+
+print("\n========== MISSING VALUE ANALYSIS ==========")
 
 print("\nMissing values in each column:")
 print(df.isnull().sum())
 
-print("\nTotal missing values:")
+print("\nTotal missing cells:")
 print(df.isnull().sum().sum())
 
-print("\nNumber of duplicate rows:")
-print(df.duplicated().sum())
+print("\nPercentage of missing values in each column:")
+print((df.isnull().mean() * 100).round(2))
 
-duplicates =df[df.duplicated()]
+# ==========================================
+# 3. DUPLICATE ANALYSIS
+# ==========================================
 
-print("\nDuplicate records:")
-print(duplicates.head(10))
+print("\n========== DUPLICATE ANALYSIS ==========")
 
-print("\nTotal duplicate records:")
-print(len(duplicates))
+# Count exact duplicate rows
+duplicate_count = df.duplicated().sum()
 
-print("\nMissing cutomerIDs in duplicates:")
+print("\nTotal exact duplicate rows:")
+print(duplicate_count)
+
+# Store duplicate records for further investigation
+duplicates = df[df.duplicated()].copy()
+
+print("\nFirst five duplicate records:")
+print(duplicates.head())
+
+# Check how many duplicate records have missing CustomerIDs
+print("\nMissing CustomerIDs in duplicate records:")
 print(duplicates["CustomerID"].isnull().sum())
 
-print("\nUnique invoices:")
-print(df["InvoiceNo"].nunique())
+# Count unique invoices containing duplicate records
+print("\nUnique invoices containing duplicate records:")
+print(duplicates["InvoiceNo"].nunique())
 
-print("\nMost common invoice numbers:")
-print(df["InvoiceNo"].value_counts().head(10))
+# ==========================================
+# 4. TRANSACTION ANALYSIS
+# ==========================================
 
-invoice = df[df["InvoiceNo"]==573585]
-print("\nInvoice 573585:")
-print(invoice)
+print("\n========== TRANSACTION ANALYSIS ==========")
 
-print("\nNumber of rows in this invoice:")
-print(len(invoice))
+# Identify records with negative quantities
+negative_qty = df[df["Quantity"] < 0]
 
-print("\nNumber of unique product it contains:")
-print(invoice["StockCode"].nunique())
-
-print(type(df["InvoiceNo"].iloc[0]))
-print(repr(df["InvoiceNo"].iloc[0]))
-print(df["InvoiceNo"].head())
-
-print(df["InvoiceNo"].astype(str).str.strip().eq("573585").sum())
-
-negative_qty = df[df["Quantity"]<0]
-
-print("\nNegative quantity is:")
-print(negative_qty.head())
-
-print("\nNumber of negative quantity:")
+print("\nRecords with negative quantities:")
 print(len(negative_qty))
 
-cancelled_invoices = df[df["InvoiceNo"].astype(str).str.startswith("C")]
-
-print("\nInvoices starts with C:")
-print(cancelled_invoices.head())
-
-print("\nNumber of cancelled invoices:")
-print(len(cancelled_invoices))
-
-print("\nThe negative quantities in these invoices:")
-print((cancelled_invoices["Quantity"]<0).sum())
-
-other_negative = df[
-    (df["Quantity"]<0) & (~df["InvoiceNo"].astype(str).str.startswith("C"))
+# Identify cancelled invoices (InvoiceNo starts with C)
+cancelled_invoices = df[
+    df["InvoiceNo"].astype(str).str.startswith("C")
 ]
 
-print("\nNegative quanitites without C prefix:")
-print(other_negative.head(10))
+print("\nRecords belonging to cancelled invoices:")
+print(len(cancelled_invoices))
 
-print("\nNumber of other negatives:")
+# Check negative quantities within cancelled invoices
+print("\nNegative quantities in cancelled invoices:")
+print((cancelled_invoices["Quantity"] < 0).sum())
+
+# Identify negative quantities without a C prefix
+other_negative = df[
+    (df["Quantity"] < 0) &
+    (~df["InvoiceNo"].astype(str).str.startswith("C"))
+]
+
+print("\nNegative quantities without a C prefix:")
 print(len(other_negative))
 
-print("\nSummary of unusual negative quantity records:")
-print(other_negative[[
-    "InvoiceNo",
-    "StockCode",
-    "Description",
-    "Quantity",
-    "InvoiceDate",
-    "UnitPrice",
-    "CustomerID"
-]].head(20))
+print("\nSample unusual negative quantity records:")
+print(
+    other_negative[
+        [
+            "InvoiceNo",
+            "StockCode",
+            "Description",
+            "Quantity",
+            "UnitPrice",
+            "CustomerID"
+        ]
+    ].head(10)
+)
 
-print("\nMissing unit price values:")
-print(other_negative["UnitPrice"].isnull().sum())
+# ==========================================
+# 5. PRICE ANALYSIS
+# ==========================================
 
-print("\nZero unit price values:")
-print((other_negative["UnitPrice"]==0).sum())
+print("\n========== PRICE ANALYSIS ==========")
 
-print("\nUnique stock codes in unusual records:")
-print(other_negative["StockCode"].nunique())
-
-print("\nMost common stock codes:")
-print(other_negative["StockCode"].value_counts().head(10))
-
-zero_price = df[df["UnitPrice"]==0]
+# Identify records with zero unit price
+zero_price = df[df["UnitPrice"] == 0]
 
 print("\nRecords with zero unit price:")
 print(len(zero_price))
 
-negative_price = df[df["UnitPrice"]<0]
-
-print("\nRecords with negatve unit price:")
-print(negative_price.head(10))
-
-print("\nTotal negative price:")
-print(len(negative_price))
-
-print(zero_price.head(10))
-
-print("\nMost common descriptions:")
+print("\nDescriptions of zero-price records:")
 print(zero_price["Description"].value_counts().head(10))
 
-print("\nMissing customerIDs:")
+print("\nMissing CustomerIDs in zero-price records:")
 print(zero_price["CustomerID"].isnull().sum())
 
-print("\nQuantity Summary:")
-print(zero_price["Quantity"].describe())
+# Identify records with negative unit price
+negative_price = df[df["UnitPrice"] < 0]
 
-print("\nNegative quantities:")
-print((zero_price["Quantity"]<0).sum())
+print("\nRecords with negative unit price:")
+print(len(negative_price))
 
-print("\nPositive Quantites:")
-print((zero_price["Quantity"]>0).sum())
+print("\nNegative-price records:")
+print(
+    negative_price[
+        [
+            "InvoiceNo",
+            "StockCode",
+            "Description",
+            "Quantity",
+            "UnitPrice",
+            "CustomerID",
+            "Country"
+        ]
+    ]
+)
 
-print("\nZero Quanitites:")
-print((zero_price["Quantity"]==0).sum())
+# ==========================================
+# 6. DUPLICATE REVENUE INVESTIGATION
+# ==========================================
 
-print("\nInvoice numbers beginning with C")
-print(zero_price["InvoiceNo"].astype(str).str.startswith("C").sum())
+print("\n========== DUPLICATE REVENUE INVESTIGATION ==========")
 
-print("\nMissing descriptions:")
-print(zero_price["Description"].isnull().sum())
-
+# Create a copy of duplicate records
 duplicates = df[df.duplicated()].copy()
 
+# Calculate revenue for duplicate records
 duplicates["Revenue"] = (
     duplicates["Quantity"] * duplicates["UnitPrice"]
 )
 
-print("\nRevenue in dupilcate records:")
-print(duplicates["Revenue"].sum())
+print("\nRevenue represented by duplicate rows:")
+print(round(duplicates["Revenue"].sum(), 2))
 
-print("\nTotal quantity in duplicate recoreds:")
+print("\nTotal quantity in duplicate rows:")
 print(duplicates["Quantity"].sum())
 
-print("\nNegative quantity in duplicate records:")
-print((duplicates["Quantity"]<0).sum())
+print("\nNegative quantity records among duplicates:")
+print((duplicates["Quantity"] < 0).sum())
 
+print("\nInvoices with the most duplicate rows:")
 print(duplicates["InvoiceNo"].value_counts().head(10))
-
-print("\nUnique invoices with duplicates:")
-print(duplicates["InvoiceNo"].nunique())
-
-i = 555524
-invoice_sample = df[df["InvoiceNo"]==i]
-print(invoice_sample)
-
-print(invoice_sample["StockCode"].value_counts().head(10))
-
-print("\nTotal rows in this invoice sample:")
-
-print(len(invoice_sample))
-
-print("/nExact duplicate rows in this invoice:")
-print(invoice_sample.duplicated().sum())
-
-print(invoice_sample["StockCode"].dtype)
-print(type(invoice_sample["StockCode"].iloc[0]))
-print(repr(invoice_sample["StockCode"].iloc[0]))
-print(invoice_sample[invoice_sample["StockCode"] == 22698])
-
-print(invoice_sample["StockCode"].unique())
-
-print("Exact duplicates:")
-print(invoice_sample.duplicated().sum())
-
-unique_invoice_rows = invoice_sample.drop_duplicates()
-
-print("\nRows after removing exact duplicates:")
-print(len(unique_invoice_rows))
-
-print("\nProduct counts after removing exact duplicates:")
-print(unique_invoice_rows["StockCode"].value_counts().head(10))

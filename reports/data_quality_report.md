@@ -2,58 +2,121 @@
 
 ## 1. Dataset Overview
 
-- Dataset: UCI Online Retail
-- Original records: 541,909
-- Original columns: 8
-- Records after removing exact duplicates: 536,641
-- Duplicate records removed: 5,268
+- **Dataset:** UCI Online Retail
+- **Original records:** 541,909
+- **Original columns:** 8
+- **Exact duplicate records identified:** 5,268
+- **Records after duplicate removal:** 536,641
+- **Columns after adding Revenue:** 9
 
-## 2. Missing Values
+The dataset contains retail transaction records, including invoice numbers, product codes, quantities, prices, customer IDs and countries.
 
-- Missing CustomerIDs: 135,037
-- Missing Descriptions: 1,454
-- Missing CustomerID records contribute approximately 14.88% of total calculated revenue.
+## 2. Missing Value Analysis
 
-**Decision:** Retain missing values instead of inserting fabricated customer IDs or product descriptions.
+After removing exact duplicates:
+
+- **Missing CustomerIDs:** 135,037 (approximately 25.17% of records)
+- **Missing Descriptions:** 1,454
+- **Total missing cells:** 136,491
+- **Revenue from records with missing CustomerIDs:** £1,447,487.53
+- **Percentage of total calculated revenue:** 14.88%
+
+Records with missing descriptions contribute £0 in calculated revenue.
+
+**Decision:** Retain missing values rather than inserting fabricated customer IDs or product descriptions. Records with missing CustomerIDs can still contribute to overall sales analysis, although they cannot be reliably used for customer-level identification.
 
 ## 3. Duplicate Records
 
-A total of 5,268 exact duplicate rows were identified and removed.
+- **Exact duplicate rows identified:** 5,268
+- **Unique invoices containing duplicate rows:** 1,933
+- **Revenue represented by duplicate rows:** £21,740.98
+- **Quantity represented by duplicate rows:** 13,948
 
-**Decision:** Remove exact duplicates while preserving the original raw dataset.
+**Decision:** Remove exact duplicate rows while preserving the original raw dataset. The revenue represented by duplicates is not automatically assumed to be overstated revenue.
 
-## 4. Cancellation and Negative Revenue Analysis
+## 4. Cancellation and Negative Quantity Analysis
 
-- Negative revenue records: 9,253
-- Cancellation invoice records: 9,251
-- Negative revenue from cancellations: £893,979.73
-- Other negative revenue records: 2
-- Negative revenue from other records: £22,124.12
+After duplicate removal:
 
-The two non-cancellation negative revenue records have the description "Adjust bad debt".
+- **Negative quantity records:** 10,587
+- **Negative quantity records with C-prefixed invoices:** 9,251
+- **Negative quantity records without C-prefixed invoices:** 1,336
+- **Revenue from all negative quantity records:** -£893,979.73
 
-**Decision:** Retain and flag cancellation records and accounting adjustments separately.
+The 1,336 unusual negative-quantity records without a C prefix have missing descriptions, zero UnitPrice and missing CustomerIDs.
 
-## 5. Zero-Price Records
+**Decision:** Retain negative quantity records for cancellation and transaction analysis. Investigate unusual records separately rather than deleting them automatically.
 
-- Zero UnitPrice records: 2,515
-- These include operational descriptions such as damaged, adjustment, check and found.
+## 5. Price Analysis
 
-**Decision:** Retain for further investigation and exclude from ordinary sales calculations where appropriate.
+After duplicate removal:
+
+### Zero-price records
+
+- **Records with UnitPrice = 0:** 2,510
+- Common descriptions include check, damages, damaged, found and adjustment.
+- **Revenue from zero-price records:** £0.00
+
+For comparison, the original dataset contained 2,515 zero-price records before duplicate removal.
+
+**Decision:** Retain zero-price records for further investigation. Exclude them from ordinary sales calculations only when the analytical definition requires it.
+
+### Negative-price records
+
+- **Records with UnitPrice below zero:** 2
+- Both records have the description "Adjust bad debt".
+- **Combined negative revenue:** -£22,124.12
+
+**Decision:** Retain these accounting-related adjustments and distinguish them from ordinary product transactions.
 
 ## 6. Revenue Overview
 
-- Positive revenue: £10,642,110.80
-- Negative revenue: -£916,103.85
-- Net calculated revenue: £9,726,006.95
+Revenue is calculated using:
+
+`Revenue = Quantity × UnitPrice`
+
+After duplicate removal:
+
+| Revenue category | Amount |
+|---|---:|
+| Positive revenue | £10,642,110.80 |
+| Negative revenue | -£916,103.85 |
+| Zero revenue | £0.00 |
+| **Net calculated revenue** | **£9,726,006.95** |
+
+Negative revenue consists of:
+
+- C-prefixed invoice records: -£893,979.73
+- Other negative-revenue records (bad-debt adjustments): -£22,124.12
+
+This is calculated net transaction revenue, not necessarily accounting-recognised revenue.
 
 ## 7. Cleaning Strategy
 
-The cleaned dataset will:
-- Remove exact duplicate rows.
-- Preserve missing values.
-- Preserve cancellation and adjustment records.
-- Create a Revenue column.
-- Add classification flags for different transaction types.
-- Preserve the original raw dataset.
+The current cleaning pipeline:
 
+- Loads the original Excel dataset.
+- Removes exact duplicate rows.
+- Calculates revenue for each transaction.
+- Preserves missing CustomerIDs and descriptions.
+- Preserves cancellation records.
+- Preserves zero-price and negative-price records.
+- Investigates unusual negative quantities.
+- Separates positive, negative and zero revenue.
+- Exports the processed dataset as a CSV file.
+
+The original raw dataset remains unchanged.
+
+## 8. Future Improvements
+
+- Add explicit transaction classification flags.
+- Investigate unusual transaction types further.
+- Develop exploratory data analysis (EDA).
+- Analyse product performance and customer purchasing patterns.
+- Build visualisations and a business intelligence dashboard.
+
+---
+
+**Project:** RetailLens — Retail Sales Intelligence  
+**Dataset:** UCI Online Retail  
+**Current stage:** Data inspection and cleaning
